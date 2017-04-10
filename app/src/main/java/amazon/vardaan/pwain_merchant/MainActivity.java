@@ -34,6 +34,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -48,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     EditText sellerNote;
     Button sendPaymentRequest;
     Button generateStaticQR;
+    Button sendOTPRequest;
 
     private OkHttpClient mClient = new OkHttpClient();
 
@@ -76,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         sellerNote = (EditText) findViewById(R.id.editSellerNote);
         sendPaymentRequest = (Button) findViewById(R.id.paymentRequestButton);
         generateStaticQR = (Button) findViewById(R.id.static_qr_button);
+        sendOTPRequest = (Button) findViewById(R.id.otpRequestButton);
         // Creating a listener for "send payment request" button click. This will be called every time the button is
         // clicked
         sendPaymentRequest.setOnClickListener(new View.OnClickListener() {
@@ -93,6 +96,39 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        sendOTPRequest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sendOTPPaymentRequest();
+            }
+        });
+
+    }
+
+    private void sendOTPPaymentRequest() {
+        try {
+
+            Random random = new Random();
+            String otp = String.format("%04d", random.nextInt(10000));
+            Log.wtf("otp created", otp);
+            sendSMSusingTwilio(customerPhone.getText().toString(), String.format("Your OTP is: %s", otp));
+            String url = new ShortenUrl().execute(new MerchantBackendTask().execute().get()).get();
+
+
+            Intent i = new Intent(getApplicationContext(), OTPActivity.class);
+            i.putExtra("otp", otp);
+            i.putExtra("orderTotalAmount", amount.getText().toString());
+            i.putExtra("mobileNumber", customerPhone.getText().toString());
+            i.putExtra("url",url);
+            startActivity(i);
+            sendSMSusingTwilio(customerPhone.getText().toString(), "You recently purchased " + item
+                    .getText()
+                    .toString() + ".Get upto 20% off on " + item.getText()
+                    .toString() + " only on HOLI when paying with A-Pay");
+
+        } catch (Exception e) {
+            Log.e("error", "error", e);
+        }
     }
 
     /**
@@ -150,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Sends an SMS using TWILIO
+     *
      * @param to
      * @param body
      */
@@ -157,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
     public void sendSMSusingTwilio(String to, String body) {
         try {
             //get ngrok url after SMS backend is up
-            post("http://5005ff38.ngrok.io/sms", new Callback() {
+            post("http://e67d7815.ngrok.io/sms", new Callback() {
 
                 @Override
                 public void onFailure(Call call, IOException e) {
